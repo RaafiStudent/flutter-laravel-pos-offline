@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_app/presentation/providers/auth_provider.dart';
+import 'package:mobile_app/presentation/screens/dashboard_screen.dart'; // <--- BARU: Import Dashboard
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,7 +11,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _emailController = TextEditingController(text: 'kasir@admin.com'); // Default value biar cepat test
+  // Default value biar cepat test (sesuai seeder database)
+  final TextEditingController _emailController = TextEditingController(text: 'kasir@admin.com'); 
   final TextEditingController _passwordController = TextEditingController(text: 'password');
   final _formKey = GlobalKey<FormState>();
 
@@ -49,7 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 40),
 
-                // 2. Error Message Box
+                // 2. Error Message Box (Muncul jika ada error)
                 if (authProvider.errorMessage != null)
                   Container(
                     margin: const EdgeInsets.only(bottom: 20),
@@ -110,11 +112,17 @@ class _LoginScreenState extends State<LoginScreen> {
                               _passwordController.text
                             );
                             
+                            // LOGIKA NAVIGASI BARU DI SINI
                             if (success && context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text("Login Berhasil!"))
                               );
-                              // TODO: Navigate to Dashboard
+                              
+                              // Pindah ke Dashboard & Hapus Login dari Back Stack
+                              Navigator.pushReplacement(
+                                context, 
+                                MaterialPageRoute(builder: (context) => const DashboardScreen())
+                              );
                             }
                           }
                         },

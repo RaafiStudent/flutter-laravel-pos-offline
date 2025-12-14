@@ -3,19 +3,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 // --- IMPORTS SENJATA KITA ---
-import 'package:mobile_app/core/database/database_helper.dart'; // Untuk Database
-import 'package:mobile_app/presentation/providers/auth_provider.dart'; // Untuk State Login
-import 'package:mobile_app/presentation/screens/login_screen.dart'; // Untuk Tampilan Login
+import 'package:mobile_app/core/database/database_helper.dart';
+import 'package:mobile_app/presentation/providers/auth_provider.dart';
+import 'package:mobile_app/presentation/providers/product_provider.dart'; // <--- 1. JANGAN LUPA IMPORT INI
+import 'package:mobile_app/presentation/screens/login_screen.dart';
 
 void main() async {
-  // 1. Wajib ada jika main() pakai async
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Pancing DatabaseHelper untuk membuat file database 'kasir_pintar.db' di HP
-  // (Agar saat user login, tabel 'users' sudah pasti ada)
+  // Pancing DatabaseHelper untuk membuat file database di HP
   await DatabaseHelper.instance.database;
 
-  // 3. Jalankan Aplikasi
   runApp(const MyApp());
 }
 
@@ -24,45 +22,37 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 4. MultiProvider: Tempat mendaftarkan semua "Otak" aplikasi
     return MultiProvider(
       providers: [
-        // Daftarkan AuthProvider agar bisa diakses dari mana saja (LoginScreen, Dashboard, dll)
+        // Provider untuk Login
         ChangeNotifierProvider(create: (_) => AuthProvider()), 
+        
+        // Provider untuk Produk (Dashboard)
+        ChangeNotifierProvider(create: (_) => ProductProvider()), // <--- 2. TAMBAHKAN INI AGAR DASHBOARD TIDAK CRASH
       ],
       child: MaterialApp(
-        debugShowCheckedModeBanner: false, // Hilangkan pita "Debug" di pojok kanan atas
+        debugShowCheckedModeBanner: false,
         title: 'Kasir Pintar',
-        
-        // 5. Setup Tema Premium
         theme: _buildThemeData(),
-        
-        // 6. Tentukan halaman pertama yang muncul
         home: const LoginScreen(), 
       ),
     );
   }
 
-  // --- KONFIGURASI TEMA (STYLE) ---
   ThemeData _buildThemeData() {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF2962FF), // Biru Profesional
+        seedColor: const Color(0xFF2962FF),
         brightness: Brightness.light,
       ),
-      // Gunakan Font Poppins untuk seluruh teks aplikasi
-      textTheme: GoogleFonts.poppinsTextTheme(), 
-      
-      // Style App Bar (Header)
+      textTheme: GoogleFonts.poppinsTextTheme(),
       appBarTheme: const AppBarTheme(
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
       ),
-      
-      // Warna Background Aplikasi (Abu-abu soft agar mata tidak cepat lelah)
       scaffoldBackgroundColor: const Color(0xFFF5F7FA), 
     );
   }
