@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-
-// --- IMPORTS SENJATA KITA ---
 import 'package:mobile_app/core/database/database_helper.dart';
 import 'package:mobile_app/presentation/providers/auth_provider.dart';
-import 'package:mobile_app/presentation/providers/product_provider.dart'; // <--- 1. JANGAN LUPA IMPORT INI
+import 'package:mobile_app/presentation/providers/product_provider.dart';
+import 'package:mobile_app/presentation/providers/cart_provider.dart'; // <--- Import CartProvider
 import 'package:mobile_app/presentation/screens/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Pancing DatabaseHelper untuk membuat file database di HP
+  
+  // Pancing pembuatan database saat aplikasi start
   await DatabaseHelper.instance.database;
 
   runApp(const MyApp());
@@ -24,17 +23,15 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // Provider untuk Login
-        ChangeNotifierProvider(create: (_) => AuthProvider()), 
-        
-        // Provider untuk Produk (Dashboard)
-        ChangeNotifierProvider(create: (_) => ProductProvider()), // <--- 2. TAMBAHKAN INI AGAR DASHBOARD TIDAK CRASH
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()), // <--- Daftarkan CartProvider
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Kasir Pintar',
         theme: _buildThemeData(),
-        home: const LoginScreen(), 
+        home: const LoginScreen(),
       ),
     );
   }
@@ -53,7 +50,7 @@ class MyApp extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
       ),
-      scaffoldBackgroundColor: const Color(0xFFF5F7FA), 
+      scaffoldBackgroundColor: const Color(0xFFF5F7FA),
     );
   }
 }
