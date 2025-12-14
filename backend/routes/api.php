@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\OrderController; // <--- WAJIB DITAMBAHKAN
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -20,5 +21,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Master Data (Untuk Sync ke Local Database)
     Route::get('/products', [ProductController::class, 'index']);
     
-    // Nanti kita tambah route 'orders' di sini untuk upload transaksi
+    // Upload Transaksi (Dari HP ke Server)
+    Route::post('/orders', [OrderController::class, 'store']); 
 });

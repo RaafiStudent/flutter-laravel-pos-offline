@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/data/models/cart_item_model.dart';
 import 'package:mobile_app/data/models/product_model.dart';
+import 'package:mobile_app/data/models/user_model.dart'; // <--- Import User
+import 'package:mobile_app/data/services/order_service.dart'; // <--- Import Order Service
 
 class CartProvider with ChangeNotifier {
   // List penyimpanan sementara
   final List<CartItem> _items = [];
   
+  // Instance Service untuk Transaksi
+  final OrderService _orderService = OrderService(); // <--- Inisialisasi Service
+
   List<CartItem> get items => _items;
 
   // Hitung Total Item (untuk badge di icon keranjang)
@@ -50,9 +55,35 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // 4. Bersihkan Keranjang (Setelah Transaksi selesai)
+  // 4. Bersihkan Keranjang
   void clear() {
     _items.clear();
     notifyListeners();
+  }
+
+  // 5. FUNGSI CHECKOUT (PENGHUBUNG KE LOGIC TRANSAKSI)
+  Future<bool> checkout(UserModel user, double paymentAmount) async {
+    // Validasi sederhana: Uang cukup gak?
+    if (paymentAmount < totalAmount) {
+      return false;
+    }
+    
+    double change = paymentAmount - totalAmount;
+
+    // Panggil OrderService untuk simpan ke SQLite & Upload ke Server
+    bool success = await _orderService.processTransaction(
+      user: user, 
+      items: _items, 
+      totalAmount: totalAmount, 
+      paymentAmount: paymentAmount, 
+      changeAmount: change
+    );
+
+    // Jika transaksi berhasil diproses (disimpan di SQLite), kosongkan keranjang
+    if (success) {
+      clear(); 
+    }
+
+    return success;
   }
 }
