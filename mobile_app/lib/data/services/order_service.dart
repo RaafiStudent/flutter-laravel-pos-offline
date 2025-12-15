@@ -22,16 +22,14 @@ class OrderService {
 
     try {
       // 1. SIMPAN KE SQLite (OFFLINE FIRST)
-      // Kita pakai Transaction SQL lokal agar aman
       await db.transaction((txn) async {
         // A. Insert Header Order
-        // Perhatikan: is_synced defaultnya 0 (Belum upload)
         int orderId = await txn.insert('orders', {
           'transaction_code': transactionCode,
           'total_amount': totalAmount,
           'payment_amount': paymentAmount,
           'change_amount': changeAmount,
-          'payment_method': 'cash', // Default cash dulu
+          'payment_method': 'cash',
           'transaction_date': transactionDate,
           'user_id': user.id,
           'is_synced': 0 
@@ -49,7 +47,6 @@ class OrderService {
       });
 
       // 2. COBA UPLOAD KE SERVER (ONLINE SYNC)
-      // Jika internet mati, codingan di bawah akan error/skip, tapi data sudah aman di SQLite
       await _uploadTransaction(
         token: user.token!,
         transactionCode: transactionCode,
@@ -60,11 +57,11 @@ class OrderService {
         items: items
       );
 
-      return true; // Transaksi sukses (Minimal tersimpan di HP)
+      return true; 
 
     } catch (e) {
       print("Transaction Local Error: $e");
-      return false; // Gagal total (Gagal simpan ke SQLite)
+      return false; 
     }
   }
 
@@ -79,7 +76,6 @@ class OrderService {
     required List<CartItem> items,
   }) async {
     try {
-      // Siapkan Payload JSON sesuai permintaan Controller Laravel
       final body = jsonEncode({
         'transaction_code': transactionCode,
         'total_amount': totalAmount,
@@ -94,7 +90,6 @@ class OrderService {
         }).toList(),
       });
 
-      // Tembak API
       final response = await http.post(
         Uri.parse('${ApiConstants.baseUrl}/orders'),
         headers: {
@@ -105,7 +100,6 @@ class OrderService {
         body: body,
       );
 
-      // Jika Sukses Upload (200 OK)
       if (response.statusCode == 200) {
         // UPDATE status di SQLite menjadi is_synced = 1
         final db = await DatabaseHelper.instance.database;
@@ -118,11 +112,16 @@ class OrderService {
         print("Upload Sukses: Data Tersinkronisasi!");
       } else {
         print("Upload Gagal (Server Error): ${response.body}");
-        // Data tetap ada di SQLite tapi is_synced = 0
       }
     } catch (e) {
       print("Upload Gagal (Koneksi Offline): $e");
-      // Tidak masalah, data tetap aman di SQLite
     }
+  }
+
+  // --- FUNGSI BARU UNTUK HISTORY ---
+  Future<List<Map<String, dynamic>>> getOrders() async {
+    final db = await DatabaseHelper.instance.database;
+    // Ambil data urut dari yang terbaru (DESC)
+    return await db.query('orders', orderBy: 'transaction_date DESC');
   }
 }

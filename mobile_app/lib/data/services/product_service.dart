@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:mobile_app/core/constants/api_constants.dart';
 import 'package:mobile_app/core/database/database_helper.dart';
 import 'package:mobile_app/data/models/product_model.dart';
-import 'package:mobile_app/data/models/user_model.dart';
+// import 'package:mobile_app/data/models/user_model.dart'; <--- HAPUS BARIS INI (Tidak kepakai)
 
 class ProductService {
   // 1. Ambil Produk dari Local Database (SQLite)
@@ -22,6 +22,7 @@ class ProductService {
       
       if (userResult.isEmpty) throw Exception("User belum login");
       
+      // Kita ambil langsung string-nya, jadi tidak butuh UserModel
       String token = userResult.first['token'] as String;
 
       // Request ke API
@@ -41,16 +42,14 @@ class ProductService {
           // Batch Insert/Update ke SQLite agar performa cepat
           final batch = db.batch();
           
-          // Hapus data lama (Strategy: Full Replace agar data sinkron kalau ada yang dihapus di server)
-          // Note: Untuk aplikasi skala besar, kita pakai 'Last Updated' check. Untuk ini, Full Replace aman.
+          // Hapus data lama (Strategy: Full Replace)
           batch.delete('products');
 
           for (var item in products) {
-            // Kita perlu memastikan format sesuai Model
-            // Karena API return object category juga, kita ambil ID-nya saja untuk tabel products
+            // Mapping Category ID
             item['category_id'] = item['category']['id']; 
             
-            // Buat object Model dulu untuk validasi tipe data
+            // Buat object Model Product
             ProductModel product = ProductModel.fromJson(item);
             
             batch.insert('products', product.toJson());
@@ -60,7 +59,6 @@ class ProductService {
         }
       }
     } catch (e) {
-      // Jika error (misal offline), biarkan saja. User tetap lihat data local.
       print("Sync Error: $e");
     }
   }

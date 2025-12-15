@@ -4,15 +4,13 @@ import 'package:provider/provider.dart';
 import 'package:mobile_app/core/database/database_helper.dart';
 import 'package:mobile_app/presentation/providers/auth_provider.dart';
 import 'package:mobile_app/presentation/providers/product_provider.dart';
-import 'package:mobile_app/presentation/providers/cart_provider.dart'; // <--- Import CartProvider
+import 'package:mobile_app/presentation/providers/cart_provider.dart';
+import 'package:mobile_app/presentation/providers/history_provider.dart'; // <--- Pastikan ini ada
 import 'package:mobile_app/presentation/screens/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Pancing pembuatan database saat aplikasi start
   await DatabaseHelper.instance.database;
-
   runApp(const MyApp());
 }
 
@@ -25,7 +23,8 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
-        ChangeNotifierProvider(create: (_) => CartProvider()), // <--- Daftarkan CartProvider
+        ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => HistoryProvider()), // <--- Pastikan ini ada
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

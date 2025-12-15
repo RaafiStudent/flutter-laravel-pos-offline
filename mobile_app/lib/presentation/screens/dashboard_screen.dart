@@ -3,9 +3,10 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_app/presentation/providers/product_provider.dart';
 import 'package:mobile_app/presentation/providers/auth_provider.dart';
-import 'package:mobile_app/presentation/providers/cart_provider.dart'; // Import CartProvider
-import 'package:mobile_app/presentation/screens/cart_screen.dart';    // Import CartScreen
+import 'package:mobile_app/presentation/providers/cart_provider.dart';
+import 'package:mobile_app/presentation/screens/cart_screen.dart';
 import 'package:mobile_app/presentation/screens/login_screen.dart';
+import 'package:mobile_app/presentation/screens/history_screen.dart'; // <--- JANGAN LUPA INI
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -19,7 +20,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Trigger Sync saat halaman dibuka
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<ProductProvider>(context, listen: false).syncData();
     });
@@ -30,13 +30,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final productProvider = Provider.of<ProductProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
-    // Format Uang Rupiah
     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("Menu Kasir", style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          // --- TOMBOL HISTORY BARU ---
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () {
+              Navigator.push(
+                context, 
+                MaterialPageRoute(builder: (_) => const HistoryScreen())
+              );
+            }, 
+          ),
+          
           IconButton(
             icon: const Icon(Icons.sync),
             onPressed: () {
@@ -54,15 +64,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       
-      // TOMBOL MELAYANG (FLOATING ACTION BUTTON) KE KERANJANG
       floatingActionButton: Consumer<CartProvider>(
         builder: (context, cart, child) {
-          if (cart.totalItems == 0) return const SizedBox(); // Sembunyikan jika kosong
+          if (cart.totalItems == 0) return const SizedBox();
           
           return FloatingActionButton.extended(
             backgroundColor: const Color(0xFF2962FF),
             onPressed: () {
-              // Pindah ke Halaman Keranjang
               Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
             },
             icon: const Icon(Icons.shopping_cart, color: Colors.white),
@@ -80,8 +88,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               padding: const EdgeInsets.all(12.0),
               child: GridView.builder(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, // 2 Kolom
-                  childAspectRatio: 0.75, // Rasio kartu
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.75,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
@@ -89,20 +97,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 itemBuilder: (context, index) {
                   final product = productProvider.products[index];
                   
-                  // BUNGKUS DENGAN GESTURE DETECTOR UNTUK KLIK
                   return GestureDetector(
                     onTap: () {
-                      // 1. Tambah ke Cart
                       Provider.of<CartProvider>(context, listen: false).addItem(product);
                       
-                      // 2. Tampilkan Notifikasi Kecil
                       ScaffoldMessenger.of(context).hideCurrentSnackBar();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text("${product.name} masuk keranjang (+1)"),
                           duration: const Duration(milliseconds: 600),
                           behavior: SnackBarBehavior.floating,
-                          margin: const EdgeInsets.only(bottom: 80, left: 20, right: 20), // Biar gak ketutup tombol
+                          margin: const EdgeInsets.only(bottom: 80, left: 20, right: 20),
                         )
                       );
                     },
@@ -112,7 +117,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Gambar Produk
                           Expanded(
                             child: Container(
                               decoration: BoxDecoration(
@@ -127,8 +131,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 : null,
                             ),
                           ),
-                          
-                          // Detail Produk
                           Padding(
                             padding: const EdgeInsets.all(12.0),
                             child: Column(
