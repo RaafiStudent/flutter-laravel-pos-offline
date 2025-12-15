@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_app/presentation/providers/history_provider.dart';
-import 'package:mobile_app/presentation/providers/auth_provider.dart'; // <--- Import Ini
+import 'package:mobile_app/presentation/providers/auth_provider.dart';
+// --- IMPORT BARU ---
+import 'package:mobile_app/data/services/printer_service.dart';
+import 'package:mobile_app/core/database/database_helper.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -31,26 +34,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
         title: const Text("Riwayat Transaksi",
             style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
-          // --- KODE BARU: TOMBOL SYNC MANUAL ---
           IconButton(
             icon: const Icon(Icons.cloud_upload),
             tooltip: "Upload Data Offline",
             onPressed: () async {
-              // 1. Ambil Token
               final auth = Provider.of<AuthProvider>(context, listen: false);
               final history = Provider.of<HistoryProvider>(context, listen: false);
 
               if (auth.user?.token == null) return;
 
-              // 2. Tampilkan Loading
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text("Sedang mengupload data...")),
               );
 
-              // 3. Eksekusi Sync
               int count = await history.syncManual(auth.user!.token!);
 
-              // 4. Feedback ke User
               if (context.mounted) {
                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
                 if (count > 0) {
@@ -120,39 +118,76 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     ),
                                   ],
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: isSynced
-                                        ? Colors.green.shade100
-                                        : Colors.red.shade100,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        isSynced
-                                            ? Icons.check_circle
-                                            : Icons.cloud_off,
-                                        size: 16,
+                                
+                                // --- TOMBOL PRINT & STATUS ---
+                                Row(
+                                  children: [
+                                    // Tombol Print (Baru)
+                                    IconButton(
+                                      icon: const Icon(Icons.print, color: Colors.blue),
+                                      onPressed: () async {
+                                        final db = await DatabaseHelper.instance.database;
+                                        
+                                        // 1. Ambil Detail Item + Nama Produk
+                                        final items = await db.rawQuery('''
+                                          SELECT i.*, p.name 
+                                          FROM order_items i
+                                          JOIN products p ON i.product_id = p.id
+                                          WHERE i.order_id = ?
+                                        ''', [order['id']]);
+
+                                        // 2. Panggil Printer Service
+                                        final printer = PrinterService();
+                                        if (await printer.isConnected) {
+                                          await printer.printStruk(order, items);
+                                        } else {
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text("Printer belum terkoneksi. Buka menu Settings."))
+                                            );
+                                          }
+                                        }
+                                      },
+                                    ),
+                                    
+                                    const SizedBox(width: 8),
+
+                                    // Indikator Status
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
                                         color: isSynced
-                                            ? Colors.green.shade700
-                                            : Colors.red.shade700,
+                                            ? Colors.green.shade100
+                                            : Colors.red.shade100,
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        isSynced ? "Synced" : "Offline",
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: isSynced
-                                              ? Colors.green.shade700
-                                              : Colors.red.shade700,
-                                        ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            isSynced
+                                                ? Icons.check_circle
+                                                : Icons.cloud_off,
+                                            size: 16,
+                                            color: isSynced
+                                                ? Colors.green.shade700
+                                                : Colors.red.shade700,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            isSynced ? "Synced" : "Offline",
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: isSynced
+                                                  ? Colors.green.shade700
+                                                  : Colors.red.shade700,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),

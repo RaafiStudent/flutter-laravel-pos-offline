@@ -6,7 +6,8 @@ import 'package:mobile_app/presentation/providers/auth_provider.dart';
 import 'package:mobile_app/presentation/providers/cart_provider.dart';
 import 'package:mobile_app/presentation/screens/cart_screen.dart';
 import 'package:mobile_app/presentation/screens/login_screen.dart';
-import 'package:mobile_app/presentation/screens/history_screen.dart'; // <--- JANGAN LUPA INI
+import 'package:mobile_app/presentation/screens/history_screen.dart';
+import 'package:mobile_app/presentation/screens/printer_settings_screen.dart'; // <--- TAMBAHAN PENTING 1
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -36,7 +37,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text("Menu Kasir", style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
-          // --- TOMBOL HISTORY BARU ---
+          // --- TOMBOL PRINTER (BARU) ---
+          IconButton(
+            icon: const Icon(Icons.print), // <--- TAMBAHAN PENTING 2
+            tooltip: "Setting Printer",
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const PrinterSettingsScreen()));
+            }, 
+          ),
+
+          // Tombol History
           IconButton(
             icon: const Icon(Icons.history),
             onPressed: () {
