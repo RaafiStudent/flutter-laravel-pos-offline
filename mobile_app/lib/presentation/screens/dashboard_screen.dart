@@ -7,7 +7,8 @@ import 'package:mobile_app/presentation/providers/cart_provider.dart';
 import 'package:mobile_app/presentation/screens/cart_screen.dart';
 import 'package:mobile_app/presentation/screens/login_screen.dart';
 import 'package:mobile_app/presentation/screens/history_screen.dart';
-import 'package:mobile_app/presentation/screens/printer_settings_screen.dart'; // <--- TAMBAHAN PENTING 1
+import 'package:mobile_app/presentation/screens/printer_settings_screen.dart';
+import 'package:mobile_app/presentation/widgets/weekly_chart_widget.dart'; // <--- IMPORT WIDGET CHART
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -37,16 +38,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text("Menu Kasir", style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
-          // --- TOMBOL PRINTER (BARU) ---
           IconButton(
-            icon: const Icon(Icons.print), // <--- TAMBAHAN PENTING 2
+            icon: const Icon(Icons.print),
             tooltip: "Setting Printer",
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const PrinterSettingsScreen()));
             }, 
           ),
-
-          // Tombol History
           IconButton(
             icon: const Icon(Icons.history),
             onPressed: () {
@@ -56,7 +54,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               );
             }, 
           ),
-          
           IconButton(
             icon: const Icon(Icons.sync),
             onPressed: () {
@@ -94,83 +91,93 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       body: productProvider.isLoading && productProvider.products.isEmpty
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.75,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: productProvider.products.length,
-                itemBuilder: (context, index) {
-                  final product = productProvider.products[index];
-                  
-                  return GestureDetector(
-                    onTap: () {
-                      Provider.of<CartProvider>(context, listen: false).addItem(product);
-                      
-                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text("${product.name} masuk keranjang (+1)"),
-                          duration: const Duration(milliseconds: 600),
-                          behavior: SnackBarBehavior.floating,
-                          margin: const EdgeInsets.only(bottom: 80, left: 20, right: 20),
-                        )
-                      );
-                    },
-                    child: Card(
-                      elevation: 3,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                                color: Colors.grey.shade200,
-                                image: product.image != null 
-                                  ? DecorationImage(image: NetworkImage(product.image!), fit: BoxFit.cover)
-                                  : null,
-                              ),
-                              child: product.image == null 
-                                ? const Center(child: Icon(Icons.fastfood, size: 40, color: Colors.grey))
-                                : null,
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(12.0),
+          : Column(
+              children: [
+                // 1. CHART WIDGET (Paling Atas)
+                const WeeklyChartWidget(),
+
+                // 2. GRID PRODUK (Dibungkus Expanded agar scrollable di sisa layar)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                    child: GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.75,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
+                      itemCount: productProvider.products.length,
+                      itemBuilder: (context, index) {
+                        final product = productProvider.products[index];
+                        
+                        return GestureDetector(
+                          onTap: () {
+                            Provider.of<CartProvider>(context, listen: false).addItem(product);
+                            
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("${product.name} masuk keranjang (+1)"),
+                                duration: const Duration(milliseconds: 600),
+                                behavior: SnackBarBehavior.floating,
+                                margin: const EdgeInsets.only(bottom: 80, left: 20, right: 20),
+                              )
+                            );
+                          },
+                          child: Card(
+                            elevation: 3,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  product.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                                      color: Colors.grey.shade200,
+                                      image: product.image != null 
+                                        ? DecorationImage(image: NetworkImage(product.image!), fit: BoxFit.cover)
+                                        : null,
+                                    ),
+                                    child: product.image == null 
+                                      ? const Center(child: Icon(Icons.fastfood, size: 40, color: Colors.grey))
+                                      : null,
+                                  ),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  currencyFormat.format(product.price),
-                                  style: const TextStyle(color: Color(0xFF2962FF), fontWeight: FontWeight.w600),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  "Stok: ${product.stock}",
-                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        product.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        currencyFormat.format(product.price),
+                                        style: const TextStyle(color: Color(0xFF2962FF), fontWeight: FontWeight.w600),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        "Stok: ${product.stock}",
+                                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
+                  ),
+                ),
+              ],
             ),
     );
   }

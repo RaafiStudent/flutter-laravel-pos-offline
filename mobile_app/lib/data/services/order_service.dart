@@ -65,7 +65,7 @@ class OrderService {
     }
   }
 
-  // Helper: Upload ke API (Single Upload)
+  // Helper: Upload ke API
   Future<void> _uploadTransaction({
     required String token,
     required String transactionCode,
@@ -117,28 +117,21 @@ class OrderService {
     }
   }
 
-  // Ambil History Transaksi dari SQLite
+  // Ambil History Transaksi
   Future<List<Map<String, dynamic>>> getOrders() async {
     final db = await DatabaseHelper.instance.database;
     return await db.query('orders', orderBy: 'transaction_date DESC');
   }
 
-  // --- KODE BARU: SYNC MANUAL ---
-  // Upload semua data yang masih merah (is_synced = 0)
+  // Sync Manual
   Future<int> syncOfflineOrders(String token) async {
     final db = await DatabaseHelper.instance.database;
-    
-    // 1. Ambil semua order yang belum sync
     final unsyncedOrders = await db.query('orders', where: 'is_synced = 0');
-
     int successCount = 0;
 
     for (var order in unsyncedOrders) {
       try {
-        // 2. Ambil detail item dari order tersebut berdasarkan ID
         final items = await db.query('order_items', where: 'order_id = ?', whereArgs: [order['id']]);
-
-        // 3. Siapkan Payload JSON
         final body = jsonEncode({
           'transaction_code': order['transaction_code'],
           'total_amount': order['total_amount'],
@@ -153,7 +146,6 @@ class OrderService {
           }).toList(),
         });
 
-        // 4. Kirim ke Server
         final response = await http.post(
           Uri.parse('${ApiConstants.baseUrl}/orders'),
           headers: {
@@ -164,21 +156,28 @@ class OrderService {
           body: body,
         );
 
-        // 5. Jika Sukses, Update status lokal jadi 1 (Hijau)
         if (response.statusCode == 200) {
-          await db.update(
-            'orders',
-            {'is_synced': 1},
-            where: 'id = ?',
-            whereArgs: [order['id']]
-          );
+          await db.update('orders', {'is_synced': 1}, where: 'id = ?', whereArgs: [order['id']]);
           successCount++;
         }
       } catch (e) {
         print("Gagal sync order ID ${order['id']}: $e");
       }
     }
-    
-    return successCount; // Mengembalikan jumlah yang berhasil diupload
+    return successCount;
+  }
+
+  // --- KODE BARU: CHART DATA ---
+  Future<List<Map<String, dynamic>>> getWeeklyRevenue() async {
+    final db = await DatabaseHelper.instance.database;
+    // Query Grouping per Hari (YYYY-MM-DD)
+    final result = await db.rawQuery('''
+      SELECT substr(transaction_date, 1, 10) as date, SUM(total_amount) as total
+      FROM orders
+      GROUP BY date
+      ORDER BY date DESC
+      LIMIT 7
+    ''');
+    return result;
   }
 }
