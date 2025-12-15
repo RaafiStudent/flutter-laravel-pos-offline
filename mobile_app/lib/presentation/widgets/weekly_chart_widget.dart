@@ -14,10 +14,11 @@ class _WeeklyChartWidgetState extends State<WeeklyChartWidget> {
   final OrderService _service = OrderService();
   
   List<Map<String, dynamic>> _data = [];
+  double _todayRevenue = 0; // Variabel khusus Hari Ini
   bool _isLoading = true;
   
   // State untuk Filter
-  String _selectedFilter = '7H'; // Default 7 Hari
+  String _selectedFilter = '7H'; 
 
   @override
   void initState() {
@@ -25,47 +26,51 @@ class _WeeklyChartWidgetState extends State<WeeklyChartWidget> {
     _loadData();
   }
 
-  // Logic ganti data berdasarkan tombol
+  // Logic load data (Grafik + Hari Ini)
   void _loadData() async {
     setState(() => _isLoading = true);
 
-    int days = 7;
+    int limit = 7;
     bool isMonthly = false;
 
     switch (_selectedFilter) {
       case '7H':
-        days = 7;
+        limit = 7; 
         isMonthly = false;
         break;
       case '1B':
-        days = 30;
+        limit = 30; 
         isMonthly = false;
         break;
       case '3B':
-        days = 90;
-        isMonthly = true; // Mulai grouping bulan
+        limit = 3; 
+        isMonthly = true; 
         break;
       case '6B':
-        days = 180;
+        limit = 6; 
         isMonthly = true;
         break;
       case '1T':
-        days = 365;
+        limit = 12; 
         isMonthly = true;
         break;
     }
 
-    final data = await _service.getRevenueReport(days: days, isMonthly: isMonthly);
+    // Ambil Data Grafik
+    final data = await _service.getRevenueReport(limit: limit, isMonthly: isMonthly);
+    // Ambil Data Hari Ini Terpisah
+    final today = await _service.getTodayRevenue();
     
     if (mounted) {
       setState(() {
-        _data = data;
+        _data = data.reversed.toList();
+        _todayRevenue = today; // Simpan data hari ini
         _isLoading = false;
       });
     }
   }
 
-  // Widget Tombol Filter Kecil
+  // Widget Tombol Filter
   Widget _buildFilterButton(String label) {
     bool isSelected = _selectedFilter == label;
     return GestureDetector(
@@ -97,11 +102,12 @@ class _WeeklyChartWidgetState extends State<WeeklyChartWidget> {
   @override
   Widget build(BuildContext context) {
     final currency = NumberFormat.compactSimpleCurrency(locale: 'id_ID');
+    final fullCurrency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
     return Container(
       margin: const EdgeInsets.all(12),
       padding: const EdgeInsets.all(16),
-      height: 320, 
+      height: 360, // Tinggi disesuaikan biar muat teks besar
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -112,10 +118,21 @@ class _WeeklyChartWidgetState extends State<WeeklyChartWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // HEADER
-          const Text("Grafik Pendapatan", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 12),
-          // FILTER TOMBOL
+          // 1. HEADER: Pendapatan Hari Ini (Besar)
+          const Text("Pendapatan Hari Ini", style: TextStyle(color: Colors.grey, fontSize: 14)),
+          const SizedBox(height: 4),
+          Text(
+            fullCurrency.format(_todayRevenue), 
+            style: const TextStyle(
+              fontSize: 24, 
+              fontWeight: FontWeight.bold, 
+              color: Color(0xFF2962FF)
+            )
+          ),
+          
+          const Divider(height: 24),
+
+          // 2. FILTER BUTTONS
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -134,12 +151,12 @@ class _WeeklyChartWidgetState extends State<WeeklyChartWidget> {
           ),
           const SizedBox(height: 20),
 
-          // CHART
+          // 3. CHART BODY
           Expanded(
             child: _isLoading 
               ? const Center(child: CircularProgressIndicator())
               : _data.isEmpty 
-                ? Center(child: Text("Tidak ada data di periode ini", style: TextStyle(color: Colors.grey.shade400)))
+                ? Center(child: Text("Tidak ada data periode ini", style: TextStyle(color: Colors.grey.shade400)))
                 : BarChart(
                     BarChartData(
                       borderData: FlBorderData(show: false),
@@ -177,14 +194,18 @@ class _WeeklyChartWidgetState extends State<WeeklyChartWidget> {
                                 
                                 String label = "";
                                 if (rawDate.length == 10) {
+                                  // Harian: Tgl/Bln
                                   DateTime date = DateTime.parse(rawDate);
                                   label = DateFormat('dd/MM').format(date);
                                 } else {
+                                  // Bulanan: Nama Bulan
                                   DateTime date = DateFormat('yyyy-MM').parse(rawDate);
                                   label = DateFormat('MMM').format(date);
                                 }
 
-                                if (_data.length > 10 && index % 2 != 0) return const SizedBox(); 
+                                // Logic agar label tidak bertumpuk jika data banyak
+                                if (_data.length > 15 && index % 3 != 0) return const SizedBox(); 
+                                if (_data.length > 7 && _data.length <= 15 && index % 2 != 0) return const SizedBox();
 
                                 return Padding(
                                   padding: const EdgeInsets.only(top: 8.0),
@@ -209,7 +230,7 @@ class _WeeklyChartWidgetState extends State<WeeklyChartWidget> {
                             BarChartRodData(
                               toY: total,
                               color: const Color(0xFF2962FF),
-                              width: _data.length > 20 ? 8 : 16,
+                              width: _data.length > 20 ? 6 : 12, // Batang mengecil otomatis
                               borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                             ),
                           ],

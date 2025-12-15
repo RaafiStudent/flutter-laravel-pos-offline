@@ -27,8 +27,7 @@ class OrderController extends Controller
             'items.*.price' => 'required|numeric',
         ]);
 
-        // Gunakan DB Transaction agar data aman (Atomicity)
-        // Jika simpan item gagal, simpan order juga dibatalkan otomatis
+        // Gunakan DB Transaction agar data aman
         try {
             DB::beginTransaction();
 

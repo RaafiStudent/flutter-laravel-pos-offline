@@ -17,6 +17,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+    // ... route products yang lama
+Route::post('/orders', [OrderController::class, 'store']); // <--- TAMBAHKAN INI
 
     // Master Data (Untuk Sync ke Local Database)
     Route::get('/products', [ProductController::class, 'index']);

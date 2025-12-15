@@ -169,49 +169,64 @@ class OrderService {
   }
 
   // --- QUERY PINTAR UNTUK CHART ---
-  // days: Berapa hari ke belakang (7, 30, 90, 365)
-  // isMonthly: Jika true, data dikelompokkan per Bulan. Jika false, per Hari.
-  Future<List<Map<String, dynamic>>> getRevenueReport({required int days, bool isMonthly = false}) async {
+  Future<List<Map<String, dynamic>>> getRevenueReport({required int limit, bool isMonthly = false}) async {
     final db = await DatabaseHelper.instance.database;
-    
-    // Tentukan Tanggal Mulai
-    DateTime startDate = DateTime.now().subtract(Duration(days: days));
-    String startStr = startDate.toIso8601String();
-
     String query;
 
     if (isMonthly) {
-      // GROUP BY BULAN (Format YYYY-MM)
+      // Grouping BULAN (Format YYYY-MM)
       query = '''
         SELECT substr(transaction_date, 1, 7) as period, SUM(total_amount) as total
         FROM orders
-        WHERE transaction_date >= '$startStr'
         GROUP BY period
-        ORDER BY period ASC
+        ORDER BY period DESC
+        LIMIT $limit
       ''';
     } else {
-      // GROUP BY HARI (Format YYYY-MM-DD)
+      // Grouping HARI (Format YYYY-MM-DD)
       query = '''
         SELECT substr(transaction_date, 1, 10) as period, SUM(total_amount) as total
         FROM orders
-        WHERE transaction_date >= '$startStr'
         GROUP BY period
-        ORDER BY period ASC
+        ORDER BY period DESC
+        LIMIT $limit
       ''';
     }
-
     return await db.rawQuery(query);
   }
 
-  // --- GENERATOR DATA DUMMY (UNTUK TESTING CHART) ---
+  // --- AMBIL PENDAPATAN HARI INI SAJA ---
+  Future<double> getTodayRevenue() async {
+    final db = await DatabaseHelper.instance.database;
+    // Ambil tanggal hari ini format YYYY-MM-DD
+    String todayStr = DateTime.now().toIso8601String().substring(0, 10);
+    
+    final result = await db.rawQuery(
+      "SELECT SUM(total_amount) as total FROM orders WHERE substr(transaction_date, 1, 10) = ?", 
+      [todayStr]
+    );
+
+    if (result.isNotEmpty && result.first['total'] != null) {
+      return double.parse(result.first['total'].toString());
+    }
+    return 0.0;
+  }
+
+  // --- GENERATOR DATA DUMMY 1 TAHUN ---
   Future<void> generateDummyData() async {
     final db = await DatabaseHelper.instance.database;
     final random = Random();
 
     await db.transaction((txn) async {
-      for (int i = 0; i < 90; i++) {
+      await txn.delete('orders'); 
+      await txn.delete('order_items');
+
+      for (int i = 0; i < 365; i++) {
         DateTime date = DateTime.now().subtract(Duration(days: i));
-        int dailyTransactionCount = random.nextInt(4); 
+        
+        if (random.nextDouble() < 0.2) continue; // 20% libur
+
+        int dailyTransactionCount = random.nextInt(5) + 1; 
 
         for (int j = 0; j < dailyTransactionCount; j++) {
           DateTime transactionTime = date.add(Duration(hours: 8 + random.nextInt(12), minutes: random.nextInt(60)));
@@ -230,6 +245,6 @@ class OrderService {
         }
       }
     });
-    print("Data Dummy 3 Bulan Berhasil Dibuat!");
+    print("Data Dummy 1 TAHUN Berhasil Dibuat!");
   }
 }
