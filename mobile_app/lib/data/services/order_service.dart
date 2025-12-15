@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:math'; // <--- PENTING UNTUK RANDOM
+import 'dart:math'; // Untuk Random Data Dummy
 import 'package:http/http.dart' as http;
 import 'package:mobile_app/core/constants/api_constants.dart';
 import 'package:mobile_app/core/database/database_helper.dart';
@@ -168,17 +168,39 @@ class OrderService {
     return successCount;
   }
 
-  // Ambil Data Chart
-  Future<List<Map<String, dynamic>>> getWeeklyRevenue() async {
+  // --- QUERY PINTAR UNTUK CHART ---
+  // days: Berapa hari ke belakang (7, 30, 90, 365)
+  // isMonthly: Jika true, data dikelompokkan per Bulan. Jika false, per Hari.
+  Future<List<Map<String, dynamic>>> getRevenueReport({required int days, bool isMonthly = false}) async {
     final db = await DatabaseHelper.instance.database;
-    final result = await db.rawQuery('''
-      SELECT substr(transaction_date, 1, 10) as date, SUM(total_amount) as total
-      FROM orders
-      GROUP BY date
-      ORDER BY date DESC
-      LIMIT 7
-    ''');
-    return result;
+    
+    // Tentukan Tanggal Mulai
+    DateTime startDate = DateTime.now().subtract(Duration(days: days));
+    String startStr = startDate.toIso8601String();
+
+    String query;
+
+    if (isMonthly) {
+      // GROUP BY BULAN (Format YYYY-MM)
+      query = '''
+        SELECT substr(transaction_date, 1, 7) as period, SUM(total_amount) as total
+        FROM orders
+        WHERE transaction_date >= '$startStr'
+        GROUP BY period
+        ORDER BY period ASC
+      ''';
+    } else {
+      // GROUP BY HARI (Format YYYY-MM-DD)
+      query = '''
+        SELECT substr(transaction_date, 1, 10) as period, SUM(total_amount) as total
+        FROM orders
+        WHERE transaction_date >= '$startStr'
+        GROUP BY period
+        ORDER BY period ASC
+      ''';
+    }
+
+    return await db.rawQuery(query);
   }
 
   // --- GENERATOR DATA DUMMY (UNTUK TESTING CHART) ---
@@ -187,31 +209,23 @@ class OrderService {
     final random = Random();
 
     await db.transaction((txn) async {
-      // Loop 90 hari ke belakang
       for (int i = 0; i < 90; i++) {
-        // Tentukan tanggal mundur (Hari ini - i hari)
         DateTime date = DateTime.now().subtract(Duration(days: i));
-        
-        // Random jumlah transaksi per hari (0 sampai 3 transaksi)
         int dailyTransactionCount = random.nextInt(4); 
 
         for (int j = 0; j < dailyTransactionCount; j++) {
-          // Random jam transaksi
           DateTime transactionTime = date.add(Duration(hours: 8 + random.nextInt(12), minutes: random.nextInt(60)));
-          
-          // Random Total Belanja (Rp 20.000 - Rp 200.000)
           double total = (random.nextInt(18) + 2) * 10000.0; 
 
-          // Masukkan ke SQLite
           await txn.insert('orders', {
             'transaction_code': "DUMMY-${i}-${j}-${random.nextInt(999)}",
             'total_amount': total,
-            'payment_amount': total, // Anggap uang pas
+            'payment_amount': total,
             'change_amount': 0,
             'payment_method': 'cash',
             'transaction_date': transactionTime.toIso8601String(),
-            'user_id': 1, // Anggap user ID 1
-            'is_synced': 1 // Tandai SUDAH SYNC (Hijau) biar gak ikut ke-upload
+            'user_id': 1,
+            'is_synced': 1 
           });
         }
       }
