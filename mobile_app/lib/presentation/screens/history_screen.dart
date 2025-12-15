@@ -3,9 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_app/presentation/providers/history_provider.dart';
 import 'package:mobile_app/presentation/providers/auth_provider.dart';
-// --- IMPORT BARU ---
 import 'package:mobile_app/data/services/printer_service.dart';
 import 'package:mobile_app/core/database/database_helper.dart';
+import 'package:mobile_app/data/services/order_service.dart'; // <--- Import OrderService
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -34,6 +34,27 @@ class _HistoryScreenState extends State<HistoryScreen> {
         title: const Text("Riwayat Transaksi",
             style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          // --- TOMBOL RAHASIA GENERATE DATA ---
+          IconButton(
+            icon: const Icon(Icons.bug_report, color: Colors.orange), // Icon Kutu
+            tooltip: "Generate Dummy Data",
+            onPressed: () async {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Sedang membuat data 3 bulan...")));
+              
+              // Panggil Service
+              await OrderService().generateDummyData();
+              
+              // Refresh Halaman History
+              if (context.mounted) {
+                Provider.of<HistoryProvider>(context, listen: false).loadOrders();
+                
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Selesai! Cek Dashboard.")));
+              }
+            },
+          ),
+
+          // --- TOMBOL SYNC MANUAL (LAMA) ---
           IconButton(
             icon: const Icon(Icons.cloud_upload),
             tooltip: "Upload Data Offline",
@@ -122,13 +143,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 // --- TOMBOL PRINT & STATUS ---
                                 Row(
                                   children: [
-                                    // Tombol Print (Baru)
                                     IconButton(
                                       icon: const Icon(Icons.print, color: Colors.blue),
                                       onPressed: () async {
                                         final db = await DatabaseHelper.instance.database;
-                                        
-                                        // 1. Ambil Detail Item + Nama Produk
                                         final items = await db.rawQuery('''
                                           SELECT i.*, p.name 
                                           FROM order_items i
@@ -136,7 +154,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                           WHERE i.order_id = ?
                                         ''', [order['id']]);
 
-                                        // 2. Panggil Printer Service
                                         final printer = PrinterService();
                                         if (await printer.isConnected) {
                                           await printer.printStruk(order, items);
@@ -152,7 +169,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     
                                     const SizedBox(width: 8),
 
-                                    // Indikator Status
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 8, vertical: 4),

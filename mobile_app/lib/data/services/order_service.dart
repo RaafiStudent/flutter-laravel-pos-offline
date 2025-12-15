@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math'; // <--- PENTING UNTUK RANDOM
 import 'package:http/http.dart' as http;
 import 'package:mobile_app/core/constants/api_constants.dart';
 import 'package:mobile_app/core/database/database_helper.dart';
@@ -167,10 +168,9 @@ class OrderService {
     return successCount;
   }
 
-  // --- KODE BARU: CHART DATA ---
+  // Ambil Data Chart
   Future<List<Map<String, dynamic>>> getWeeklyRevenue() async {
     final db = await DatabaseHelper.instance.database;
-    // Query Grouping per Hari (YYYY-MM-DD)
     final result = await db.rawQuery('''
       SELECT substr(transaction_date, 1, 10) as date, SUM(total_amount) as total
       FROM orders
@@ -179,5 +179,43 @@ class OrderService {
       LIMIT 7
     ''');
     return result;
+  }
+
+  // --- GENERATOR DATA DUMMY (UNTUK TESTING CHART) ---
+  Future<void> generateDummyData() async {
+    final db = await DatabaseHelper.instance.database;
+    final random = Random();
+
+    await db.transaction((txn) async {
+      // Loop 90 hari ke belakang
+      for (int i = 0; i < 90; i++) {
+        // Tentukan tanggal mundur (Hari ini - i hari)
+        DateTime date = DateTime.now().subtract(Duration(days: i));
+        
+        // Random jumlah transaksi per hari (0 sampai 3 transaksi)
+        int dailyTransactionCount = random.nextInt(4); 
+
+        for (int j = 0; j < dailyTransactionCount; j++) {
+          // Random jam transaksi
+          DateTime transactionTime = date.add(Duration(hours: 8 + random.nextInt(12), minutes: random.nextInt(60)));
+          
+          // Random Total Belanja (Rp 20.000 - Rp 200.000)
+          double total = (random.nextInt(18) + 2) * 10000.0; 
+
+          // Masukkan ke SQLite
+          await txn.insert('orders', {
+            'transaction_code': "DUMMY-${i}-${j}-${random.nextInt(999)}",
+            'total_amount': total,
+            'payment_amount': total, // Anggap uang pas
+            'change_amount': 0,
+            'payment_method': 'cash',
+            'transaction_date': transactionTime.toIso8601String(),
+            'user_id': 1, // Anggap user ID 1
+            'is_synced': 1 // Tandai SUDAH SYNC (Hijau) biar gak ikut ke-upload
+          });
+        }
+      }
+    });
+    print("Data Dummy 3 Bulan Berhasil Dibuat!");
   }
 }
