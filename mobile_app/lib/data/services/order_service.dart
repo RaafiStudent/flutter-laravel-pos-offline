@@ -65,7 +65,7 @@ class OrderService {
     }
   }
 
-  // Helper: Upload ke API
+  // Helper: Upload ke API (Single Upload)
   Future<void> _uploadTransaction({
     required String token,
     required String transactionCode,
@@ -101,7 +101,6 @@ class OrderService {
       );
 
       if (response.statusCode == 200) {
-        // UPDATE status di SQLite menjadi is_synced = 1
         final db = await DatabaseHelper.instance.database;
         await db.update(
           'orders', 
@@ -118,10 +117,68 @@ class OrderService {
     }
   }
 
-  // --- FUNGSI BARU UNTUK HISTORY ---
+  // Ambil History Transaksi dari SQLite
   Future<List<Map<String, dynamic>>> getOrders() async {
     final db = await DatabaseHelper.instance.database;
-    // Ambil data urut dari yang terbaru (DESC)
     return await db.query('orders', orderBy: 'transaction_date DESC');
+  }
+
+  // --- KODE BARU: SYNC MANUAL ---
+  // Upload semua data yang masih merah (is_synced = 0)
+  Future<int> syncOfflineOrders(String token) async {
+    final db = await DatabaseHelper.instance.database;
+    
+    // 1. Ambil semua order yang belum sync
+    final unsyncedOrders = await db.query('orders', where: 'is_synced = 0');
+
+    int successCount = 0;
+
+    for (var order in unsyncedOrders) {
+      try {
+        // 2. Ambil detail item dari order tersebut berdasarkan ID
+        final items = await db.query('order_items', where: 'order_id = ?', whereArgs: [order['id']]);
+
+        // 3. Siapkan Payload JSON
+        final body = jsonEncode({
+          'transaction_code': order['transaction_code'],
+          'total_amount': order['total_amount'],
+          'payment_amount': order['payment_amount'],
+          'change_amount': order['change_amount'],
+          'payment_method': order['payment_method'],
+          'transaction_date': order['transaction_date'],
+          'items': items.map((item) => {
+            'product_id': item['product_id'],
+            'quantity': item['quantity'],
+            'price': item['price'],
+          }).toList(),
+        });
+
+        // 4. Kirim ke Server
+        final response = await http.post(
+          Uri.parse('${ApiConstants.baseUrl}/orders'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: body,
+        );
+
+        // 5. Jika Sukses, Update status lokal jadi 1 (Hijau)
+        if (response.statusCode == 200) {
+          await db.update(
+            'orders',
+            {'is_synced': 1},
+            where: 'id = ?',
+            whereArgs: [order['id']]
+          );
+          successCount++;
+        }
+      } catch (e) {
+        print("Gagal sync order ID ${order['id']}: $e");
+      }
+    }
+    
+    return successCount; // Mengembalikan jumlah yang berhasil diupload
   }
 }

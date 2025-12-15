@@ -20,4 +20,22 @@ class HistoryProvider with ChangeNotifier {
     _isLoading = false;
     notifyListeners();
   }
+
+  // --- KODE BARU: SYNC MANUAL ---
+  // Method untuk dipanggil dari Tombol UI
+  Future<int> syncManual(String token) async {
+    _isLoading = true;
+    notifyListeners();
+
+    // Panggil Service
+    int count = await _orderService.syncOfflineOrders(token);
+
+    // Refresh list agar warna berubah jadi hijau
+    await loadOrders();
+
+    _isLoading = false;
+    notifyListeners();
+    
+    return count;
+  }
 }

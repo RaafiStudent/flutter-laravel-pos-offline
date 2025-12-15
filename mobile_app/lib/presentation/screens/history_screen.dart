@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_app/presentation/providers/history_provider.dart';
+import 'package:mobile_app/presentation/providers/auth_provider.dart'; // <--- Import Ini
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -29,6 +30,42 @@ class _HistoryScreenState extends State<HistoryScreen> {
       appBar: AppBar(
         title: const Text("Riwayat Transaksi",
             style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          // --- KODE BARU: TOMBOL SYNC MANUAL ---
+          IconButton(
+            icon: const Icon(Icons.cloud_upload),
+            tooltip: "Upload Data Offline",
+            onPressed: () async {
+              // 1. Ambil Token
+              final auth = Provider.of<AuthProvider>(context, listen: false);
+              final history = Provider.of<HistoryProvider>(context, listen: false);
+
+              if (auth.user?.token == null) return;
+
+              // 2. Tampilkan Loading
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Sedang mengupload data...")),
+              );
+
+              // 3. Eksekusi Sync
+              int count = await history.syncManual(auth.user!.token!);
+
+              // 4. Feedback ke User
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                if (count > 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(backgroundColor: Colors.green, content: Text("Berhasil mengupload $count transaksi!")),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Semua data sudah sinkron (atau gagal koneksi).")),
+                  );
+                }
+              }
+            },
+          ),
+        ],
       ),
       body: history.isLoading
           ? const Center(child: CircularProgressIndicator())
