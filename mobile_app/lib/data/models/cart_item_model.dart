@@ -1,14 +1,13 @@
 import 'package:mobile_app/data/models/product_model.dart';
 
 class CartItem {
+  final String id; // Kita tetapkan sebagai String agar cocok dengan Provider
   final ProductModel product;
-  int quantity;
+  final int quantity;
 
   CartItem({
+    required this.id,
     required this.product,
-    this.quantity = 1,
+    required this.quantity,
   });
-
-  // Getter untuk total harga per item (Harga x Jumlah)
-  double get totalPrice => product.price * quantity;
 }
