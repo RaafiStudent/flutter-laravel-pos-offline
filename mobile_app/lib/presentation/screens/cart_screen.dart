@@ -144,14 +144,12 @@ class _CartScreenState extends State<CartScreen> {
       context: context,
       barrierDismissible: false, 
       builder: (ctx) {
-        // StatefulBuilder AGAR DIALOG BISA UPDATE SAAT KETIK
         return StatefulBuilder(
           builder: (context, setState) {
             
             double totalBill = cart.totalAmount;
             double paymentAmount = 0;
             
-            // Logic parse uang (hapus titik)
             if (_paymentController.text.isNotEmpty) {
               try {
                 paymentAmount = double.parse(_paymentController.text.replaceAll('.', ''));
@@ -171,40 +169,35 @@ class _CartScreenState extends State<CartScreen> {
                   Text(currencyFormat.format(totalBill), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 20),
                   
-                  // INPUT UANG (BANK STYLE)
+                  // INPUT UANG
                   TextField(
                     controller: _paymentController,
                     keyboardType: TextInputType.number,
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     decoration: InputDecoration(
-                      labelText: "Masukkan Uang Diterima",
+                      labelText: "Uang Diterima",
                       prefixText: "Rp ",
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      // Error merah jika uang kurang
                       errorText: (paymentAmount > 0 && paymentAmount < totalBill) 
                           ? "Kurang ${currencyFormat.format(totalBill - paymentAmount)}" 
                           : null,
                     ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly, 
-                    ],
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     onChanged: (string) {
-                      // Logic format ribuan real-time
                       if (string.isNotEmpty) {
                         String formatted = _formatNumber(string);
-                        // Trik agar kursor tidak lompat ke depan
                         _paymentController.value = TextEditingValue(
                           text: formatted,
                           selection: TextSelection.collapsed(offset: formatted.length),
                         );
                       }
-                      setState(() {}); // Refresh dialog agar kembalian terhitung
+                      setState(() {}); 
                     },
                   ),
                   
                   const SizedBox(height: 16),
                   
-                  // KOTAK KEMBALIAN (Muncul jika uang cukup)
+                  // KOTAK KEMBALIAN
                   if (paymentAmount >= totalBill) 
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -236,14 +229,12 @@ class _CartScreenState extends State<CartScreen> {
                     backgroundColor: const Color(0xFF2962FF),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  // Tombol mati jika uang kurang
                   onPressed: (paymentAmount >= totalBill) 
                     ? () async {
-                        Navigator.pop(context); // Tutup dialog input
+                        Navigator.pop(context); // Tutup Dialog Input
 
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Memproses Transaksi...")));
 
-                        // PANGGIL SERVICE
                         final OrderService service = OrderService();
                         bool success = await service.processTransaction(
                           user: auth.user!,
@@ -254,9 +245,11 @@ class _CartScreenState extends State<CartScreen> {
                         );
 
                         if (success) {
-                          cart.clearCart();
+                          // --- PERUBAHAN UTAMA DI SINI ---
+                          // Kita JANGAN hapus keranjang dulu.
+                          // Tampilkan Struk dulu, baru hapus nanti pas struk ditutup.
                           if (mounted) {
-                            _showSuccessDialog(context, totalBill, paymentAmount, change);
+                            _showSuccessDialog(context, totalBill, paymentAmount, change, cart);
                           }
                         } else {
                           if (mounted) {
@@ -275,43 +268,65 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  // --- DIALOG SUKSES (STRUK DIGITAL) ---
-  void _showSuccessDialog(BuildContext context, double total, double pay, double change) {
+  // --- DIALOG SUKSES (STRUK DIGITAL ala MALL) ---
+  // Perhatikan: Kita terima parameter 'cart' di sini
+  void _showSuccessDialog(BuildContext context, double total, double pay, double change, CartProvider cart) {
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: false, // User GABISA tutup sembarangan (Harus klik tombol)
       builder: (ctx) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          backgroundColor: Colors.white,
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // HEADER STRUK
               const Icon(Icons.check_circle, color: Colors.green, size: 60),
-              const SizedBox(height: 16),
-              const Text("Transaksi Berhasil!", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              const Text("PEMBAYARAN SUKSES", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              const Text("KASIR PINTAR APP", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey)),
               const SizedBox(height: 20),
-              const Divider(),
               
-              _buildStrukRow("Total Tagihan", total, isBold: true),
+              // GARIS PUTUS-PUTUS
+              const Text("---------------------------------", style: TextStyle(color: Colors.grey)),
+              
+              // ISI STRUK
+              const SizedBox(height: 10),
+              _buildStrukRow("Total Tagihan", total, isBold: true, fontSize: 18),
               const SizedBox(height: 8),
               _buildStrukRow("Tunai", pay),
               const SizedBox(height: 8),
               _buildStrukRow("Kembalian", change, color: Colors.green, isBold: true),
-              
-              const Divider(),
               const SizedBox(height: 10),
-              Text(
-                "Data tersimpan di perangkat.\nAkan diupload saat online.",
+              
+              const Text("---------------------------------", style: TextStyle(color: Colors.grey)),
+              const SizedBox(height: 10),
+              
+              const Text(
+                "Terima kasih telah berbelanja.",
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 20),
+              
+              // TOMBOL TRANSAKSI BARU (Disini baru kita hapus keranjang)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2962FF)),
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Transaksi Baru", style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2962FF),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(vertical: 12)
+                  ),
+                  onPressed: () {
+                    // 1. BERSIHKAN KERANJANG (Di sini baru dihapus)
+                    cart.clearCart();
+                    
+                    // 2. TUTUP DIALOG
+                    Navigator.pop(context);
+                  },
+                  child: const Text("TRANSAKSI BARU", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               )
             ],
@@ -321,18 +336,18 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  // WIDGET KECIL UNTUK BARIS STRUK
-  Widget _buildStrukRow(String label, double value, {bool isBold = false, Color color = Colors.black}) {
+  // WIDGET BARIS STRUK (Dipercantik)
+  Widget _buildStrukRow(String label, double value, {bool isBold = false, Color color = Colors.black, double fontSize = 14}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: Colors.grey.shade700)),
+        Text(label, style: TextStyle(color: Colors.grey.shade800, fontSize: fontSize)),
         Text(
           currencyFormat.format(value),
           style: TextStyle(
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             color: color,
-            fontSize: isBold ? 16 : 14
+            fontSize: fontSize
           ),
         ),
       ],

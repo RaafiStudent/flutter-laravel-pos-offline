@@ -8,7 +8,11 @@ import 'package:mobile_app/data/models/user_model.dart';
 import 'package:uuid/uuid.dart';
 
 class OrderService {
-  // Fungsi Utama: Proses Checkout
+  
+  // ===============================================================
+  // 1. FITUR TRANSAKSI (CHECKOUT)
+  // ===============================================================
+  
   Future<bool> processTransaction({
     required UserModel user,
     required List<CartItem> items,
@@ -18,6 +22,8 @@ class OrderService {
   }) async {
     final db = await DatabaseHelper.instance.database;
     final uuid = const Uuid();
+    
+    // Buat Kode Transaksi Unik
     final String transactionCode = "TRX-${uuid.v4().substring(0, 8).toUpperCase()}";
     final String transactionDate = DateTime.now().toIso8601String();
 
@@ -38,9 +44,10 @@ class OrderService {
 
         // B. Insert Detail Items
         for (var item in items) {
+          // PENTING: Ambil ID Produk Asli (Int), bukan ID Keranjang
           await txn.insert('order_items', {
             'order_id': orderId,
-            'product_id': item.product.id,
+            'product_id': item.product.id, 
             'quantity': item.quantity,
             'price': item.product.price,
           });
@@ -48,8 +55,8 @@ class OrderService {
       });
 
       // 2. COBA UPLOAD KE SERVER (ONLINE SYNC)
-      await _uploadTransaction(
-        token: user.token!,
+      _uploadTransaction(
+        token: user.token ?? "",
         transactionCode: transactionCode,
         totalAmount: totalAmount,
         paymentAmount: paymentAmount,
@@ -58,15 +65,15 @@ class OrderService {
         items: items
       );
 
-      return true; 
+      return true; // Sukses
 
     } catch (e) {
-      print("Transaction Local Error: $e");
+      print("Transaction Error: $e");
       return false; 
     }
   }
 
-  // Helper: Upload ke API
+  // Helper Private: Upload satu transaksi
   Future<void> _uploadTransaction({
     required String token,
     required String transactionCode,
@@ -76,6 +83,8 @@ class OrderService {
     required String transactionDate,
     required List<CartItem> items,
   }) async {
+    if (token.isEmpty) return;
+
     try {
       final body = jsonEncode({
         'transaction_code': transactionCode,
@@ -102,6 +111,7 @@ class OrderService {
       );
 
       if (response.statusCode == 200) {
+        // Update status sync jadi 1 (Hijau)
         final db = await DatabaseHelper.instance.database;
         await db.update(
           'orders', 
@@ -109,30 +119,34 @@ class OrderService {
           where: 'transaction_code = ?', 
           whereArgs: [transactionCode]
         );
-        print("Upload Sukses: Data Tersinkronisasi!");
-      } else {
-        print("Upload Gagal (Server Error): ${response.body}");
       }
     } catch (e) {
-      print("Upload Gagal (Koneksi Offline): $e");
+      print("Upload Background Gagal: $e");
     }
   }
 
-  // Ambil History Transaksi
+  // ===============================================================
+  // 2. FITUR HISTORY & SYNC (YANG TADI HILANG)
+  // ===============================================================
+
+  // Ambil Semua History Transaksi
   Future<List<Map<String, dynamic>>> getOrders() async {
     final db = await DatabaseHelper.instance.database;
     return await db.query('orders', orderBy: 'transaction_date DESC');
   }
 
-  // Sync Manual
+  // Sync Manual (Tombol Awan di History)
   Future<int> syncOfflineOrders(String token) async {
     final db = await DatabaseHelper.instance.database;
+    // Ambil yang belum sync (is_synced = 0)
     final unsyncedOrders = await db.query('orders', where: 'is_synced = 0');
     int successCount = 0;
 
     for (var order in unsyncedOrders) {
       try {
+        // Ambil detail itemnya
         final items = await db.query('order_items', where: 'order_id = ?', whereArgs: [order['id']]);
+        
         final body = jsonEncode({
           'transaction_code': order['transaction_code'],
           'total_amount': order['total_amount'],
@@ -162,19 +176,21 @@ class OrderService {
           successCount++;
         }
       } catch (e) {
-        print("Gagal sync order ID ${order['id']}: $e");
+        print("Gagal sync ID ${order['id']}: $e");
       }
     }
     return successCount;
   }
 
-  // --- QUERY PINTAR UNTUK CHART ---
+  // ===============================================================
+  // 3. FITUR DASHBOARD (CHART & LAPORAN)
+  // ===============================================================
+
   Future<List<Map<String, dynamic>>> getRevenueReport({required int limit, bool isMonthly = false}) async {
     final db = await DatabaseHelper.instance.database;
     String query;
 
     if (isMonthly) {
-      // Grouping BULAN (Format YYYY-MM)
       query = '''
         SELECT substr(transaction_date, 1, 7) as period, SUM(total_amount) as total
         FROM orders
@@ -183,7 +199,6 @@ class OrderService {
         LIMIT $limit
       ''';
     } else {
-      // Grouping HARI (Format YYYY-MM-DD)
       query = '''
         SELECT substr(transaction_date, 1, 10) as period, SUM(total_amount) as total
         FROM orders
@@ -195,10 +210,8 @@ class OrderService {
     return await db.rawQuery(query);
   }
 
-  // --- AMBIL PENDAPATAN HARI INI SAJA ---
   Future<double> getTodayRevenue() async {
     final db = await DatabaseHelper.instance.database;
-    // Ambil tanggal hari ini format YYYY-MM-DD
     String todayStr = DateTime.now().toIso8601String().substring(0, 10);
     
     final result = await db.rawQuery(
@@ -212,7 +225,7 @@ class OrderService {
     return 0.0;
   }
 
-  // --- GENERATOR DATA DUMMY 1 TAHUN ---
+  // Generator Dummy Data
   Future<void> generateDummyData() async {
     final db = await DatabaseHelper.instance.database;
     final random = Random();
@@ -223,8 +236,7 @@ class OrderService {
 
       for (int i = 0; i < 365; i++) {
         DateTime date = DateTime.now().subtract(Duration(days: i));
-        
-        if (random.nextDouble() < 0.2) continue; // 20% libur
+        if (random.nextDouble() < 0.2) continue; 
 
         int dailyTransactionCount = random.nextInt(5) + 1; 
 
@@ -245,6 +257,5 @@ class OrderService {
         }
       }
     });
-    print("Data Dummy 1 TAHUN Berhasil Dibuat!");
   }
 }
