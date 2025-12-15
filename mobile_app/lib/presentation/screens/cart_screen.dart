@@ -245,9 +245,7 @@ class _CartScreenState extends State<CartScreen> {
                         );
 
                         if (success) {
-                          // --- PERUBAHAN UTAMA DI SINI ---
-                          // Kita JANGAN hapus keranjang dulu.
-                          // Tampilkan Struk dulu, baru hapus nanti pas struk ditutup.
+                          // Tampilkan Struk dulu, baru hapus keranjang nanti
                           if (mounted) {
                             _showSuccessDialog(context, totalBill, paymentAmount, change, cart);
                           }
@@ -269,12 +267,11 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   // --- DIALOG SUKSES (STRUK DIGITAL ala MALL) ---
-  // Perhatikan: Kita terima parameter 'cart' di sini
   void _showSuccessDialog(BuildContext context, double total, double pay, double change, CartProvider cart) {
     showDialog(
       context: context,
-      barrierDismissible: false, // User GABISA tutup sembarangan (Harus klik tombol)
-      builder: (ctx) {
+      barrierDismissible: false,
+      builder: (ctx) { // <--- PENTING: Kita beri nama 'ctx' untuk dialog ini
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           backgroundColor: Colors.white,
@@ -310,7 +307,7 @@ class _CartScreenState extends State<CartScreen> {
               ),
               const SizedBox(height: 20),
               
-              // TOMBOL TRANSAKSI BARU (Disini baru kita hapus keranjang)
+              // TOMBOL TRANSAKSI BARU
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -320,11 +317,11 @@ class _CartScreenState extends State<CartScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 12)
                   ),
                   onPressed: () {
-                    // 1. BERSIHKAN KERANJANG (Di sini baru dihapus)
+                    // 1. BERSIHKAN KERANJANG
                     cart.clearCart();
                     
-                    // 2. TUTUP DIALOG
-                    Navigator.pop(context);
+                    // 2. TUTUP DIALOG (GUNAKAN 'ctx' AGAR TIDAK ERROR)
+                    Navigator.pop(ctx); 
                   },
                   child: const Text("TRANSAKSI BARU", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
