@@ -1,28 +1,42 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
+
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProductController;
-use App\Http\Controllers\Api\OrderController; // <--- WAJIB DITAMBAHKAN
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\OrderController;
 
-// Public Routes (Bisa diakses tanpa Token)
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+*/
+
+// =======================
+// PUBLIC ROUTES
+// =======================
+
+// Login (ambil token)
 Route::post('/login', [AuthController::class, 'login']);
 
-// Protected Routes (Harus punya Token yang valid)
+// Product Sync (Offline-First, TANPA LOGIN)
+Route::get('/products', [ProductController::class, 'index']);
+
+
+// =======================
+// PROTECTED ROUTES
+// =======================
 Route::middleware('auth:sanctum')->group(function () {
-    
-    // Auth
+
+    // Logout
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Get user info (optional, debug)
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
-    // ... route products yang lama
-Route::post('/orders', [OrderController::class, 'store']); // <--- TAMBAHKAN INI
 
-    // Master Data (Untuk Sync ke Local Database)
-    Route::get('/products', [ProductController::class, 'index']);
-    
-    // Upload Transaksi (Dari HP ke Server)
-    Route::post('/orders', [OrderController::class, 'store']); 
+    // Upload transaksi (AMAN)
+    Route::post('/orders', [OrderController::class, 'store']);
 });
