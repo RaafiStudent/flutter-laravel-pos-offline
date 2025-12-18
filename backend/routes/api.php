@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\OrderReceiptController;
+use App\Http\Controllers\Api\CashierShiftController;
 
 /*
 |--------------------------------------------------------------------------
@@ -42,7 +43,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // ORDER / TRANSAKSI
     // =======================
     Route::post('/orders', [OrderController::class, 'store']);
-
+    Route::post('/shifts/open', [CashierShiftController::class, 'open']);
+Route::post('/shifts/close', [CashierShiftController::class, 'close']);
      Route::get('/reports/daily', [ReportController::class, 'daily']);
     Route::get('/reports/monthly', [ReportController::class, 'monthly']);
 
