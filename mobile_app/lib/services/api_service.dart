@@ -5,6 +5,10 @@ class ApiService {
   static const String baseUrl = 'http://10.0.2.2:8000/api';
   // GANTI IP jika pakai HP fisik
 
+  // =======================
+  // SHIFT KASIR
+  // =======================
+
   static Future<Map<String, dynamic>> openShift(
       String token, double openingBalance) async {
     final response = await http.post(
@@ -33,7 +37,23 @@ class ApiService {
         'closing_balance': closingBalance,
       }),
     );
-    
+
+    return jsonDecode(response.body);
+  }
+
+  // =======================
+  // STRUK / RECEIPT
+  // =======================
+
+  static Future<Map<String, dynamic>> getReceipt(
+      String token, int orderId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/orders/$orderId/receipt'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
 
     return jsonDecode(response.body);
   }
