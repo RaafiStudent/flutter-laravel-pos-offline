@@ -32,11 +32,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Logout
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Get user info (optional, debug)
+    // Get user info (optional)
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
 
-    // Upload transaksi (AMAN)
+    // Upload transaksi (AMAN + IDEMPOTENT)
     Route::post('/orders', [OrderController::class, 'store']);
 });
