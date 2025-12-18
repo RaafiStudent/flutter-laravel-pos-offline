@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
-
+use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\OrderController;
@@ -42,6 +42,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // ORDER / TRANSAKSI
     // =======================
     Route::post('/orders', [OrderController::class, 'store']);
+
+     Route::get('/reports/daily', [ReportController::class, 'daily']);
+    Route::get('/reports/monthly', [ReportController::class, 'monthly']);
 
     // =======================
     // STRUK / RECEIPT
