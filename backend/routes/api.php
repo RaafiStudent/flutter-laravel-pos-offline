@@ -2,9 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
+
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\OrderReceiptController;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,7 +21,7 @@ use App\Http\Controllers\Api\OrderController;
 // Login
 Route::post('/login', [AuthController::class, 'login']);
 
-// Product Sync (Offline-First, tanpa login)
+// Product Sync (Offline-First)
 Route::get('/products', [ProductController::class, 'index']);
 
 
@@ -36,9 +38,13 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
 
-    // Order (Transaksi)
+    // =======================
+    // ORDER / TRANSAKSI
+    // =======================
     Route::post('/orders', [OrderController::class, 'store']);
 
-    // Receipt / Struk
-    Route::get('/orders/{id}/receipt', [OrderController::class, 'receipt']);
+    // =======================
+    // STRUK / RECEIPT
+    // =======================
+    Route::get('/orders/{id}/receipt', [OrderReceiptController::class, 'show']);
 });

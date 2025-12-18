@@ -16,6 +16,10 @@ class Order extends Model
         'transaction_date',
     ];
 
+    protected $casts = [
+        'transaction_date' => 'datetime',
+    ];
+
     public function items()
     {
         return $this->hasMany(OrderItem::class);
