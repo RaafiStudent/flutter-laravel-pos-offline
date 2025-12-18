@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import 'package:mobile_app/services/api_service.dart';
 
 class ReceiptPage extends StatefulWidget {
   final String token;
@@ -51,7 +51,6 @@ class _ReceiptPageState extends State<ReceiptPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // HEADER TOKO
             Text(
               receipt!['store']['name'],
               style: const TextStyle(
@@ -66,7 +65,6 @@ class _ReceiptPageState extends State<ReceiptPage> {
             ),
             const Divider(),
 
-            // ITEM LIST
             Expanded(
               child: ListView.builder(
                 itemCount: items.length,
@@ -85,7 +83,6 @@ class _ReceiptPageState extends State<ReceiptPage> {
 
             const Divider(),
 
-            // TOTAL
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -110,7 +107,6 @@ class _ReceiptPageState extends State<ReceiptPage> {
 
             const SizedBox(height: 20),
 
-            // BUTTON PRINT
             ElevatedButton.icon(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
