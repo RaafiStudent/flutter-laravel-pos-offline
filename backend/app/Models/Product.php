@@ -11,8 +11,15 @@ class Product extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'category_id', 'name', 'sku', 'price', 'stock', 'image'
-    ];
+    'category_id',
+    'name',
+    'sku',
+    'price',
+    'image',
+    // ❌ stock TIDAK boleh diisi dari client
+    // stok hanya boleh berubah lewat transaksi (OrderController)
+];
+
 
     public function category()
     {

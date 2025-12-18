@@ -11,66 +11,99 @@ use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
+    /**
+     * Simpan transaksi dari aplikasi Flutter (Offline-First).
+     * Client TIDAK PERNAH mengirim stok.
+     * Stok hanya dihitung dan dikurangi oleh SERVER.
+     */
     public function store(Request $request)
     {
-        // Validasi data yang dikirim dari Flutter
-        $request->validate([
-            'transaction_code' => 'required|unique:orders',
-            'total_amount' => 'required|numeric',
-            'payment_amount' => 'required|numeric',
-            'change_amount' => 'required|numeric',
-            'payment_method' => 'required|in:cash,qris,transfer',
-            'transaction_date' => 'required',
-            'items' => 'required|array',
+        // ===============================
+        // 1. VALIDASI DATA DARI CLIENT
+        // ===============================
+        $validated = $request->validate([
+            'transaction_code' => 'required|string|unique:orders,transaction_code',
+            'total_amount'     => 'required|numeric|min:0',
+            'payment_amount'   => 'required|numeric|min:0',
+            'change_amount'    => 'required|numeric|min:0',
+            'payment_method'   => 'required|in:cash,qris,transfer',
+            'transaction_date' => 'required|date',
+            'items'            => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.price' => 'required|numeric',
+            'items.*.quantity'   => 'required|integer|min:1',
+            'items.*.price'      => 'required|numeric|min:0',
         ]);
 
-        // Gunakan DB Transaction agar data aman
+        // ===============================
+        // 2. DATABASE TRANSACTION
+        // ===============================
         try {
             DB::beginTransaction();
 
-            // 1. Simpan Header Transaksi
+            // ===============================
+            // 3. SIMPAN HEADER TRANSAKSI
+            // ===============================
             $order = Order::create([
-                'transaction_code' => $request->transaction_code,
-                'user_id' => $request->user()->id, // Ambil ID kasir dari Token
-                'total_amount' => $request->total_amount,
-                'payment_amount' => $request->payment_amount,
-                'change_amount' => $request->change_amount,
-                'payment_method' => $request->payment_method,
-                'transaction_date' => $request->transaction_date,
+                'transaction_code' => $validated['transaction_code'],
+                'user_id'          => $request->user()->id, // dari token Sanctum
+                'total_amount'     => $validated['total_amount'],
+                'payment_amount'   => $validated['payment_amount'],
+                'change_amount'    => $validated['change_amount'],
+                'payment_method'   => $validated['payment_method'],
+                'transaction_date' => $validated['transaction_date'],
             ]);
 
-            // 2. Simpan Detail Item & Kurangi Stok
-            foreach ($request->items as $item) {
+            // ===============================
+            // 4. SIMPAN DETAIL & KURANGI STOK
+            // ===============================
+            foreach ($validated['items'] as $item) {
+
+                // Ambil produk (LOCK server)
+                $product = Product::findOrFail($item['product_id']);
+
+                // Validasi stok cukup
+                if ($product->stock < $item['quantity']) {
+                    throw new \Exception(
+                        "Stok produk '{$product->name}' tidak mencukupi"
+                    );
+                }
+
+                // Simpan detail transaksi
                 OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
-                    'price' => $item['price'],
+                    'order_id'   => $order->id,
+                    'product_id' => $product->id,
+                    'quantity'   => $item['quantity'],
+                    'price'      => $item['price'],
                 ]);
 
-                // Kurangi Stok Produk
-                $product = Product::find($item['product_id']);
-                if ($product) {
-                    $product->decrement('stock', $item['quantity']);
-                }
+                // ⚠️ PENTING:
+                // Stok hanya boleh dikurangi oleh SERVER
+                // Client tidak pernah mengirim field stock
+                $product->decrement('stock', $item['quantity']);
             }
 
             DB::commit();
 
+            // ===============================
+            // 5. RESPONSE SUKSES
+            // ===============================
             return response()->json([
                 'success' => true,
-                'message' => 'Transaksi Berhasil Diupload',
-                'data' => $order
-            ]);
+                'message' => 'Transaksi berhasil disinkronkan',
+                'data'    => [
+                    'order_id'         => $order->id,
+                    'transaction_code' => $order->transaction_code,
+                ],
+            ], 201);
 
         } catch (\Exception $e) {
+
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal menyimpan transaksi: ' . $e->getMessage()
+                'message' => 'Gagal menyimpan transaksi',
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
