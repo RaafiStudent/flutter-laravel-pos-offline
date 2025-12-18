@@ -2,33 +2,24 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Api\OrderReceiptController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\OrderController;
 
 /*
 |--------------------------------------------------------------------------
-| API Routes
+| API Routes - Kasir Pintar (Offline-First POS)
 |--------------------------------------------------------------------------
-| Semua route API untuk sistem Kasir Pintar (Offline-First POS)
-|
-| - Public routes: dipakai untuk initial sync
-| - Protected routes: butuh token (Sanctum)
-|
 */
 
 // =======================
 // PUBLIC ROUTES
 // =======================
 
-// Login (ambil token untuk kasir / admin)
+// Login
 Route::post('/login', [AuthController::class, 'login']);
 
-// Sinkronisasi produk (Offline-First, TANPA LOGIN)
-// Digunakan saat:
-// - Aplikasi pertama kali dibuka
-// - Sync data produk
+// Product Sync (Offline-First, tanpa login)
 Route::get('/products', [ProductController::class, 'index']);
 
 
@@ -37,19 +28,17 @@ Route::get('/products', [ProductController::class, 'index']);
 // =======================
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Logout (hapus token aktif)
+    // Logout
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Ambil data user yang sedang login (opsional / debug)
+    // Debug user login
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
 
-    Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/orders/{id}/receipt', [OrderReceiptController::class, 'show']);
-    // Upload transaksi dari aplikasi kasir
-    // Sudah:
-    // - Server Wins (stok)
-    // - Idempotent (anti transaksi ganda)
+    // Order (Transaksi)
     Route::post('/orders', [OrderController::class, 'store']);
+
+    // Receipt / Struk
+    Route::get('/orders/{id}/receipt', [OrderController::class, 'receipt']);
 });
