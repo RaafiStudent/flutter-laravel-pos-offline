@@ -8,17 +8,44 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    // API ini akan dipanggil saat HP pertama kali buka / tombol Sync ditekan
-    public function index()
+    /**
+     * Incremental & Paginated Product Sync
+     * Digunakan oleh Flutter saat:
+     * - Sync pertama kali
+     * - Tombol Sync ditekan
+     *
+     * Query Params:
+     * - limit (default 100)
+     * - cursor (optional)
+     */
+    public function index(Request $request)
     {
-        // Ambil produk beserta kategorinya
-        // Kita gunakan 'latest' agar produk baru ada di atas
-        $products = Product::with('category')->latest()->get();
+        $limit = (int) $request->get('limit', 100);
+        $limit = $limit > 0 && $limit <= 200 ? $limit : 100;
+
+        $query = Product::with('category')
+            ->orderBy('id');
+
+        // Cursor-based pagination
+        if ($request->filled('cursor')) {
+            $query->where('id', '>', $request->cursor);
+        }
+
+        $products = $query
+            ->limit($limit)
+            ->get();
+
+        $lastId = $products->last()?->id;
 
         return response()->json([
             'success' => true,
-            'message' => 'List Data Produk',
-            'data' => $products
+            'message' => 'Product sync batch',
+            'data'    => $products,
+            'meta'    => [
+                'limit'       => $limit,
+                'next_cursor' => $lastId,
+                'has_more'    => $products->count() === $limit,
+            ],
         ]);
     }
 }
