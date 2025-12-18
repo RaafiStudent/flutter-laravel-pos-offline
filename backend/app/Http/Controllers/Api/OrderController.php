@@ -8,6 +8,8 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Illuminate\Support\Facades\Storage;
 
 class OrderController extends Controller
 {
@@ -87,36 +89,50 @@ class OrderController extends Controller
      * Generate data struk belanja
      */
     public function receipt($id)
-    {
-        $order = Order::with(['items.product', 'cashier'])->findOrFail($id);
+{
+    $order = Order::with(['items.product', 'cashier'])->findOrFail($id);
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'store' => [
-                    'name' => 'TOKO MAJU JAYA',
-                    'address' => 'Jl. Contoh No. 123',
-                ],
-                'transaction' => [
-                    'code' => $order->transaction_code,
-                    'date' => $order->transaction_date->format('d-m-Y H:i'),
-                    'cashier' => $order->cashier->name,
-                ],
-                'items' => $order->items->map(function ($item) {
-                    return [
-                        'name' => $item->product->name,
-                        'qty' => $item->quantity,
-                        'price' => $item->price,
-                        'subtotal' => $item->price * $item->quantity,
-                    ];
-                }),
-                'summary' => [
-                    'total' => $order->total_amount,
-                    'paid' => $order->payment_amount,
-                    'change' => $order->change_amount,
-                    'payment_method' => strtoupper($order->payment_method),
-                ],
+    // Generate QR Code (isi: kode transaksi)
+    $qrContent = $order->transaction_code;
+
+    $qrImage = QrCode::format('png')
+        ->size(300)
+        ->generate($qrContent);
+
+    // Simpan QR sementara (opsional)
+    $qrPath = 'receipts/qr_' . $order->id . '.png';
+    Storage::disk('public')->put($qrPath, $qrImage);
+
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'store' => [
+                'name' => 'TOKO MAJU JAYA',
+                'address' => 'Jl. Contoh No. 123',
             ],
-        ]);
-    }
+            'transaction' => [
+                'code' => $order->transaction_code,
+                'date' => $order->transaction_date->format('d-m-Y H:i'),
+                'cashier' => $order->cashier->name,
+            ],
+            'items' => $order->items->map(function ($item) {
+                return [
+                    'name' => $item->product->name,
+                    'qty' => $item->quantity,
+                    'price' => $item->price,
+                    'subtotal' => $item->price * $item->quantity,
+                ];
+            }),
+            'summary' => [
+                'total' => $order->total_amount,
+                'paid' => $order->payment_amount,
+                'change' => $order->change_amount,
+                'payment_method' => strtoupper($order->payment_method),
+            ],
+            'qr' => [
+                'content' => $qrContent,
+                'image_url' => asset('storage/' . $qrPath),
+            ],
+        ],
+    ]);
 }
