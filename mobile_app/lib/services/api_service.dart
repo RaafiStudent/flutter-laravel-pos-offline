@@ -41,6 +41,35 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+    // =======================
+  // LAPORAN PENJUALAN
+  // =======================
+
+  static Future<Map<String, dynamic>> getDailyReport(String token) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/reports/daily'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> getMonthlyReport(
+      String token, int month, int year) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/reports/monthly?month=$month&year=$year'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    return jsonDecode(response.body);
+  }
+
   // =======================
   // STRUK / RECEIPT
   // =======================
