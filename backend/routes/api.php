@@ -44,9 +44,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // =======================
     Route::post('/orders', [OrderController::class, 'store']);
     Route::post('/shifts/open', [CashierShiftController::class, 'open']);
-Route::post('/shifts/close', [CashierShiftController::class, 'close']);
-     Route::get('/reports/daily', [ReportController::class, 'daily']);
+    Route::post('/shifts/close', [CashierShiftController::class, 'close']);
+    Route::get('/reports/daily', [ReportController::class, 'daily']);
     Route::get('/reports/monthly', [ReportController::class, 'monthly']);
+    Route::get('/products/low-stock', [ProductController::class, 'lowStock']);
+
 
     // =======================
     // STRUK / RECEIPT
