@@ -18,6 +18,20 @@ class ProductController extends Controller
      * - limit (default 100)
      * - cursor (optional)
      */
+
+    public function lowStock()
+{
+    $products = \App\Models\Product::whereColumn('stock', '<=', 'min_stock')
+        ->orderBy('stock', 'asc')
+        ->get(['id', 'name', 'stock', 'min_stock']);
+
+    return response()->json([
+        'success' => true,
+        'data' => $products,
+    ]);
+}
+
+
     public function index(Request $request)
     {
         $limit = (int) $request->get('limit', 100);
