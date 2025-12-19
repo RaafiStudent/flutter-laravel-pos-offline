@@ -70,6 +70,24 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+    // =======================
+  // STOK MINIMUM
+  // =======================
+
+  static Future<Map<String, dynamic>> getLowStockProducts(
+      String token) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/products/low-stock'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    return jsonDecode(response.body);
+  }
+
+
   // =======================
   // STRUK / RECEIPT
   // =======================
