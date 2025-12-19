@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_app/pages/widgets/app_drawer.dart';
 import 'open_shift_page.dart';
 import 'close_shift_page.dart';
 
@@ -20,6 +21,7 @@ class _ShiftStatusPageState extends State<ShiftStatusPage> {
       appBar: AppBar(
         title: const Text('Shift Kasir'),
       ),
+      drawer: AppDrawer(token: widget.token), // ⬅️ INI KUNCINYA
       body: Center(
         child: isShiftOpen
             ? Column(
@@ -27,8 +29,8 @@ class _ShiftStatusPageState extends State<ShiftStatusPage> {
                 children: [
                   const Text(
                     'SHIFT: OPEN',
-                    style: TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.bold),
+                    style:
+                        TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
@@ -56,8 +58,8 @@ class _ShiftStatusPageState extends State<ShiftStatusPage> {
                 children: [
                   const Text(
                     'Shift Belum Dibuka',
-                    style: TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.bold),
+                    style:
+                        TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
