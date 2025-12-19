@@ -35,6 +35,36 @@ class _ReceiptPageState extends State<ReceiptPage> {
     });
   }
 
+  Widget dashedLine() {
+    return const Text(
+      '--------------------------------',
+      style: TextStyle(fontSize: 12),
+    );
+  }
+
+  Widget rowText(String left, String right,
+      {bool bold = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          left,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        Text(
+          right,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (loading) {
@@ -47,78 +77,94 @@ class _ReceiptPageState extends State<ReceiptPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Struk Belanja')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Text(
-              receipt!['store']['name'],
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+      body: Center(
+        child: Container(
+          width: 280, // mirip kertas thermal 58mm
+          padding: const EdgeInsets.all(12),
+          color: Colors.white,
+          child: Column(
+            children: [
+              // HEADER TOKO
+              Text(
+                receipt!['store']['name'],
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${receipt!['transaction']['date']} '
-              '${receipt!['transaction']['time']}',
-            ),
-            const Divider(),
-
-            Expanded(
-              child: ListView.builder(
-                itemCount: items.length,
-                itemBuilder: (_, index) {
-                  final item = items[index];
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('${item['name']} x${item['qty']}'),
-                      Text('Rp ${item['subtotal']}'),
-                    ],
-                  );
-                },
+              const SizedBox(height: 4),
+              Text(
+                receipt!['store']['address'] ?? '',
+                style: const TextStyle(fontSize: 10),
+                textAlign: TextAlign.center,
               ),
-            ),
+              const SizedBox(height: 6),
+              Text(
+                '${receipt!['transaction']['date']} '
+                '${receipt!['transaction']['time']}',
+                style: const TextStyle(fontSize: 10),
+              ),
 
-            const Divider(),
+              const SizedBox(height: 6),
+              dashedLine(),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('TOTAL'),
-                Text('Rp ${receipt!['summary']['total']}'),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('BAYAR'),
-                Text('Rp ${receipt!['summary']['paid']}'),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('KEMBALI'),
-                Text('Rp ${receipt!['summary']['change']}'),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Print thermal akan ditambahkan'),
+              // ITEM LIST
+              ...items.map<Widget>((item) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: rowText(
+                    '${item['name']} x${item['qty']}',
+                    item['subtotal'].toString(),
                   ),
                 );
-              },
-              icon: const Icon(Icons.print),
-              label: const Text('Print Struk'),
-            ),
-          ],
+              }).toList(),
+
+              dashedLine(),
+
+              // TOTAL
+              rowText(
+                'TOTAL',
+                receipt!['summary']['total'].toString(),
+                bold: true,
+              ),
+              rowText(
+                'BAYAR',
+                receipt!['summary']['paid'].toString(),
+              ),
+              rowText(
+                'KEMBALI',
+                receipt!['summary']['change'].toString(),
+              ),
+
+              dashedLine(),
+
+              const SizedBox(height: 8),
+              const Text(
+                'Terima Kasih\nSelamat Berbelanja',
+                style: TextStyle(fontSize: 10),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 12),
+
+              // BUTTON PRINT (dummy dulu)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content:
+                            Text('Print thermal akan ditambahkan'),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.print),
+                  label: const Text('Print'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
