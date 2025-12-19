@@ -12,8 +12,10 @@ class ReportPage extends StatefulWidget {
 
 class _ReportPageState extends State<ReportPage> {
   bool loading = true;
+
   Map<String, dynamic>? dailyReport;
   Map<String, dynamic>? monthlyReport;
+  List<dynamic> lowStockProducts = [];
 
   @override
   void initState() {
@@ -22,19 +24,28 @@ class _ReportPageState extends State<ReportPage> {
   }
 
   Future<void> fetchReports() async {
-    final daily = await ApiService.getDailyReport(widget.token);
-    final now = DateTime.now();
-    final monthly = await ApiService.getMonthlyReport(
-      widget.token,
-      now.month,
-      now.year,
-    );
+    try {
+      final daily = await ApiService.getDailyReport(widget.token);
+      final now = DateTime.now();
+      final monthly = await ApiService.getMonthlyReport(
+        widget.token,
+        now.month,
+        now.year,
+      );
+      final lowStock =
+          await ApiService.getLowStockProducts(widget.token);
 
-    setState(() {
-      dailyReport = daily;
-      monthlyReport = monthly;
-      loading = false;
-    });
+      setState(() {
+        dailyReport = daily['data'];
+        monthlyReport = monthly['data'];
+        lowStockProducts = lowStock['data'];
+        loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        loading = false;
+      });
+    }
   }
 
   Widget infoCard(String title, String value) {
@@ -44,9 +55,13 @@ class _ReportPageState extends State<ReportPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Text(title,
-                style:
-                    const TextStyle(fontSize: 14, color: Colors.grey)),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.grey,
+              ),
+            ),
             const SizedBox(height: 6),
             Text(
               value,
@@ -74,16 +89,54 @@ class _ReportPageState extends State<ReportPage> {
     final topProducts = dailyReport!['top_products'];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Laporan Penjualan')),
+      appBar: AppBar(
+        title: const Text('Laporan Penjualan'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ===== HARIAN =====
+            // =========================
+            // WARNING STOK MINIMUM
+            // =========================
+            if (lowStockProducts.isNotEmpty) ...[
+              Card(
+                color: Colors.orange.shade100,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '⚠️ Produk Hampir Habis',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...lowStockProducts.map((item) {
+                        return Text(
+                          '- ${item['name']} (stok: ${item['stock']})',
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            // =========================
+            // LAPORAN HARIAN
+            // =========================
             const Text(
               'Hari Ini',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 8),
             Row(
@@ -105,10 +158,15 @@ class _ReportPageState extends State<ReportPage> {
 
             const SizedBox(height: 20),
 
-            // ===== PRODUK TERLARIS =====
+            // =========================
+            // PRODUK TERLARIS
+            // =========================
             const Text(
               'Produk Terlaris (Hari Ini)',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 8),
             Card(
@@ -128,10 +186,15 @@ class _ReportPageState extends State<ReportPage> {
 
             const SizedBox(height: 20),
 
-            // ===== BULANAN =====
+            // =========================
+            // LAPORAN BULANAN
+            // =========================
             const Text(
               'Bulan Ini',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 8),
             Row(
